@@ -5,15 +5,11 @@
 #define PIN GPIO_NUM_14
 #define NUM_LEDS 144
 #define HALF_LEDS_INDEX 72
-#define STEP 2
-
-#define PORT 8080
 
 CRGB leds[NUM_LEDS];
 int currentPosition = 0;
 CRGB color = CRGB::Black;
 
-int sockfd = 0;
 AsyncUDP udp;
 
 void addActions();
