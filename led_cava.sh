@@ -16,4 +16,5 @@ trap cleanup INT
 
 echo "Target device: $HOST:$PORT"
 echo "Using config: $CONFIG"
+cleanup
 cava -p $CONFIG | netcat -u $HOST $PORT

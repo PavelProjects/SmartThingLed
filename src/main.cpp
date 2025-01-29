@@ -4,7 +4,7 @@
 
 #define PIN GPIO_NUM_14
 #define NUM_LEDS 144
-#define HALF_LEDS_INDEX 72
+#define HALF_LEDS_INDEX 71
 
 CRGB leds[NUM_LEDS];
 int currentPosition = 0;
@@ -70,8 +70,8 @@ void setPosition(int position) {
     fillColor(currentPosition, position);
   } else {
     for (int i = currentPosition; i >= position; i--) {
-      leds[HALF_LEDS_INDEX + i] = CRGB::Black;
-      leds[HALF_LEDS_INDEX - 1 - i] = leds[HALF_LEDS_INDEX + i];
+      leds[HALF_LEDS_INDEX - i + 1] = CRGB::Black;
+      leds[HALF_LEDS_INDEX + i] = leds[HALF_LEDS_INDEX - i + 1];
     }
   }
 
@@ -104,9 +104,11 @@ void handleCommand(char command) {
 }
 
 void fillColor(uint8_t from, uint8_t to) {
+  int index = 0;
   for (int i = from; i < to; i++) {
-    leds[HALF_LEDS_INDEX + i] = color == CRGB::Black ? CHSV(245 - i, 255, 255) : color;
-    leds[HALF_LEDS_INDEX - 1 - i] = leds[HALF_LEDS_INDEX + i];
+    index = HALF_LEDS_INDEX - i + 1;
+    leds[index] = color == CRGB::Black ? CHSV(190 + index, 255, 255) : color;
+    leds[HALF_LEDS_INDEX + i] = leds[index];
   }
 }
 

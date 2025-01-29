@@ -2,7 +2,7 @@
 
 [general]
 bars = 1
-sensitivity = 80
+sensitivity = 60
 
 [output]
 method = raw
