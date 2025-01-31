@@ -8,15 +8,17 @@
 
 CRGB leds[NUM_LEDS];
 int currentPosition = 0;
+int8_t channelsCurrent[] = {0, 0};
 CRGB color = CRGB::Black;
 
 AsyncUDP udp;
+int8_t channels[2];
 
 void addActions();
 void setupConfig();
 void handleCommand(char command);
 void fillColor(uint8_t from, uint8_t to);
-void setPosition(int position);
+void setPosition(int8_t *position);
 void onConfigUpdate();
 uint8_t getBrightnessFromConfig();
 void loadColorFromConfig();
@@ -39,13 +41,23 @@ void setup() {
 
   if (udp.listen(9090)) {
     udp.onPacket([](AsyncUDPPacket packet) {
-      if (packet.length() < 1) {
-        return;
-      }
-      if (packet.data()[0] < '0' || packet.data()[0] > '9') {
-        handleCommand(packet.data()[0]);      
-      } else {
-        setPosition(atoi((char*)packet.data()));
+      if (packet.length() > 0 && packet.length() < 10) {
+        if (packet.data()[0] < '0' || packet.data()[0] > '9') {
+          handleCommand(packet.data()[0]);      
+        } else {
+          byte ch = 0;
+          int8_t tmp = 0;
+          for (int i = 0; i < packet.length(); i++) {
+            if (packet.data()[i] == ';') {
+              channels[ch] = tmp;
+              ch++;
+              tmp = 0;
+            } else {
+              tmp += (packet.data()[i] - '0') + tmp * 10;
+            }
+          }
+          setPosition(channels);
+        }
       }
     });
   }
@@ -55,28 +67,53 @@ void loop() {
   delay(100);
 }
 
-void setPosition(int position) {
-  if (position > HALF_LEDS_INDEX) {
-    position = HALF_LEDS_INDEX;
-  } else if (position < 0) {
-    position = 0;
-  }
-
-  if (currentPosition == position) {
-    return;
-  }
-
-  if (position > currentPosition) {
-    fillColor(currentPosition, position);
-  } else {
-    for (int i = currentPosition; i >= position; i--) {
-      leds[HALF_LEDS_INDEX - i + 1] = CRGB::Black;
-      leds[HALF_LEDS_INDEX + i] = leds[HALF_LEDS_INDEX - i + 1];
+void setPosition(int8_t *channels) {
+  for (byte ch = 0; ch < 2; ch++) {
+    if (channels[ch] > HALF_LEDS_INDEX) {
+      channels[ch] = HALF_LEDS_INDEX;
+    } else if (channels[ch] < 0) {
+      channels[ch] = 0;
     }
+
+    if (channelsCurrent[ch] == channels[ch]) {
+      continue;
+    }
+
+    if (channels[ch] > channelsCurrent[ch]) {
+      int index = 0;
+      for (int i = channelsCurrent[ch]; i < channels[ch]; i++) {
+        if (ch == 0) {
+          index = 1 - i;
+        } else {
+          index = i;
+        }
+        leds[HALF_LEDS_INDEX + index] = color == CRGB::Black ? CHSV(260 - i, 255, 255) : color;
+      }
+    } else {
+      int index = 0;
+      for (int i = channelsCurrent[ch]; i >= channels[ch]; i--) {
+        if (ch == 0) {
+          index = 1 - i;
+        } else {
+          index = i;
+        }
+        leds[HALF_LEDS_INDEX + index] = CRGB::Black;
+      }
+    }
+
+    channelsCurrent[ch] = channels[ch];
   }
 
   FastLED.show();
-  currentPosition = position;
+}
+
+void fillColor(uint8_t from, uint8_t to) {
+  uint8_t index = 0;
+  for (int i = from; i < to; i++) {
+    index = HALF_LEDS_INDEX - i + 1;
+    leds[index] = color == CRGB::Black ? CHSV(190 + index, 255, 255) : color;
+    leds[HALF_LEDS_INDEX + i] = leds[index];
+  }
 }
 
 /*
@@ -100,15 +137,6 @@ void handleCommand(char command) {
     case 'd':
       ActionsManager.call("turn_off");
       break;
-  }
-}
-
-void fillColor(uint8_t from, uint8_t to) {
-  int index = 0;
-  for (int i = from; i < to; i++) {
-    index = HALF_LEDS_INDEX - i + 1;
-    leds[index] = color == CRGB::Black ? CHSV(190 + index, 255, 255) : color;
-    leds[HALF_LEDS_INDEX + i] = leds[index];
   }
 }
 
