@@ -87,7 +87,7 @@ void setPosition(int8_t *channels) {
         } else {
           index = i;
         }
-        leds[HALF_LEDS_INDEX + index] = color == CRGB::Black ? CHSV(260 - i, 255, 255) : color;
+        leds[HALF_LEDS_INDEX + index] = CHSV(260 + i, 255, 255);
       }
     } else {
       int index = 0;
