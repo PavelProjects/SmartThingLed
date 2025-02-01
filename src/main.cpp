@@ -166,8 +166,8 @@ void addActions() {
 }
 
 void setupConfig() {
-  ConfigManager.addConfigEntry("brightness");
-  ConfigManager.addConfigEntry("color");
+  ConfigManager.add("brightness");
+  ConfigManager.add("color");
 
   ConfigManager.onConfigUpdate(onConfigUpdate);
 }
@@ -179,7 +179,7 @@ void onConfigUpdate() {
 }
 
 uint8_t getBrightnessFromConfig() {
-  String brt = ConfigManager.getConfigValue("brightness");
+  String brt = ConfigManager.get("brightness");
   uint8_t value = 0;
   if (brt.length() > 0) {
     return brt.toInt();
@@ -188,7 +188,7 @@ uint8_t getBrightnessFromConfig() {
 }
 
 void loadColorFromConfig() {
-  String conf = ConfigManager.getConfigValue("color");
+  String conf = ConfigManager.get("color");
   if (conf.isEmpty() || conf.length() > 11 || conf.equals("g")) {
     color = CRGB::Black;
   } else {
