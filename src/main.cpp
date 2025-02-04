@@ -7,46 +7,58 @@
 #define HALF_LEDS_INDEX 71
 
 enum Mode {
-  MODE_RGB,
   MODE_MUSIC,
+  MODE_RGB,
   MODE_OFF
 };
 
 Mode mode;
 CRGB leds[NUM_LEDS];
-int currentPosition = 0;
-int8_t channelsCurrent[] = {0, 0};
-byte counter = 0;
 
 AsyncUDP udp;
-int8_t channels[2];
+int8_t channels[2] = {0, 0};
+int8_t channelsCurrent[] = {0, 0};
+int musicBase = 0;
+byte counter = 0;
 
-void switchMode(Mode mode, bool clear = true);
+
+void switchMode(Mode newMode);
 void onPacket(AsyncUDPPacket &packet);
 void addActions();
-void setupConfig();
-void setPosition(int8_t *position);
+void music(int8_t *position);
 void onConfigUpdate();
 
 void rgb();
 
 void setup() {
   addActions();
-  setupConfig();
+  SensorsManager.add("mode", []() {
+    switch(mode) {
+      case MODE_RGB:
+        return "rgb";
+      case MODE_MUSIC:
+        return "music";
+      default:
+        return "off";
+    }
+  });
+  ConfigManager.add("brightness");
+  ConfigManager.add("base_color");
+  ConfigManager.onConfigUpdate(onConfigUpdate);
+
+  FastLED.addLeds<WS2812, PIN, GRB>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 5000);
+  FastLED.clear(true);
 
   if (!SmartThing.init("led")) {
     st_log_error("main", "Failed to init SmartThing");
   }
+  onConfigUpdate();
 
   while(!SmartThing.wifiConnected()) {
     delay(100);
   }
 
-  FastLED.addLeds<WS2812, PIN, GRB>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-  // FastLED.setMaxPowerInVoltsAndMilliamps(5, 5000);
-  FastLED.clear(true);
-
-  onConfigUpdate();
   int index = 0;
   for (int i = 1; i < HALF_LEDS_INDEX; i++) {
     for (byte ch = 0; ch < 2; ch++) {
@@ -56,51 +68,52 @@ void setup() {
         index = i;
       }
       leds[HALF_LEDS_INDEX + index] = CHSV(i, 255, 255);
-      FastLED.show();
     }
+    FastLED.show();
   }
+  delay(100);
   FastLED.clear(true);
+
+  if (udp.listen(9090)) {
+    udp.onPacket(onPacket);
+  }
 }
 
 void loop() {
-  SmartThing.loop();
-  
-  switch(mode) {
-    case MODE_RGB:
-      rgb();
-      delay(5);
-      break;
-    case MODE_OFF:
-    default:
-      delay(200);
+    if (mode == MODE_RGB) {
+    rgb();
+    delay(10);
+  } else {
+    delay(200);
   }
-  delay(100);
 }
 
-void switchMode(Mode newMode, bool clear) {
-  if (newMode == mode) {
-    return;
+void switchMode(Mode newMode) {
+  if (mode == MODE_OFF) {
+    FastLED.setBrightness(ConfigManager.getInt("brightness"));
   }
+  
+  mode = newMode;
+  delay(50);
 
-  if (mode == MODE_MUSIC) {
-    udp.flush();
-    udp.close();
-  }
-
-  if (newMode == MODE_MUSIC) {
-    if (udp.listen(9090)) {
-      udp.onPacket(onPacket);
+  if (mode == MODE_OFF) {
+    for (int i = FastLED.getBrightness(); i >= 0; i--) {
+      FastLED.setBrightness(i);
+      FastLED.show();
+      delay(3);
+    }
+  } else if (mode == MODE_MUSIC) {
+    for (byte ch = 0; ch < 2; ch++) {
+      channels[ch] = 0;
+      channelsCurrent[ch] = 0;
     }
   }
 
-  mode = newMode;
-  if (clear) {
-    FastLED.clear(true);
-  }
+  FastLED.clear(true);
 }
 
 void onPacket(AsyncUDPPacket &packet) {
-  if (packet.length() == 0 || packet.length() > 10) {
+  if (mode != MODE_MUSIC || packet.length() == 0 || packet.length() > 10) {
     return;
   }
 
@@ -122,57 +135,48 @@ void onPacket(AsyncUDPPacket &packet) {
         tmp += (packet.data()[i] - '0') + tmp * 10;
       }
     }
-    setPosition(channels);
+    music(channels);
   }
 }
 
 void addActions() {
-  ActionsManager.add("music", "Music", []() {
-    switchMode(MODE_MUSIC);
-    return true;
-  });
   ActionsManager.add("rgb", "RGB", []() {
     switchMode(MODE_RGB);
     return true;
   });
-  ActionsManager.add("turn_off", "Turn off", []() {
-    switchMode(MODE_OFF, false);
-    for (int i = FastLED.getBrightness(); i >= 0; i--) {
-      FastLED.setBrightness(i);
-      FastLED.show();
-      delay(3);
-    }
+  ActionsManager.add("music", "Music", []() {
+    switchMode(MODE_MUSIC);
+    return true;
+  });
+  ActionsManager.add("off", "Turn off", []() {
+    switchMode(MODE_OFF);
     return true;
   });
 }
 
-void setupConfig() {
-  ConfigManager.add("brightness");
-  ConfigManager.onConfigUpdate(onConfigUpdate);
-}
-
 void onConfigUpdate() {
-  FastLED.setBrightness(ConfigManager.getInt("brightness"));
+  FastLED.setBrightness(ConfigManager.getInt("brightness", 100));
   FastLED.show();
+
+  int newBase = ConfigManager.getInt("base_color");
+  if (newBase != musicBase) {
+    musicBase = newBase;
+    for (byte ch = 0; ch < 2; ch++) {
+      channels[ch] = 0;
+      channelsCurrent[ch] = 0;
+    }
+  }
 }
 
 void rgb() {
-  for (byte ch = 0; ch < 2; ch++) {
-    int index = 0;
-    for (int i = 0; i < HALF_LEDS_INDEX; i--) {
-      if (ch == 0) {
-        index = 1 - i;
-      } else {
-        index = i;
-      }
-      leds[HALF_LEDS_INDEX + index] = CHSV(counter + 2 * i, 255, 255);
-    }
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV(counter + 2 * i, 255, 255);
   }
   counter++;
   FastLED.show();
 }
 
-void setPosition(int8_t *channels) {
+void music(int8_t *channels) {
   for (byte ch = 0; ch < 2; ch++) {
     if (channels[ch] > HALF_LEDS_INDEX) {
       channels[ch] = HALF_LEDS_INDEX;
@@ -192,7 +196,7 @@ void setPosition(int8_t *channels) {
         } else {
           index = i;
         }
-        leds[HALF_LEDS_INDEX + index] = CHSV(260 + i, 255, 255);
+        leds[HALF_LEDS_INDEX + index] = CHSV(musicBase + i, 255, 255);
       }
     } else {
       int index = 0;
