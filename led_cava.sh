@@ -2,7 +2,7 @@
 
 HOST=192.168.1.11
 PORT=9090
-CONFIG=$(pwd)/cava_config
+CONFIG=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)/cava_config
 
 # looks bad but i don't care
 function cleanup() {
