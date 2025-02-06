@@ -1,12 +1,12 @@
 #!/bin/bash
 
-HOST=192.168.1.11
-PORT=9090
+HOST=224.1.1.1
+PORT=7780
 CONFIG=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)/cava_config
 
 # looks bad but i don't care
 function cleanup() {
-  echo c\n | netcat -u $HOST $PORT &
+  echo c\n | netcat -vu $HOST $PORT &
   PID=$(echo $!)
   sleep 0.3
   kill $PID

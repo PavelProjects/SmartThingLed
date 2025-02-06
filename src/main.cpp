@@ -74,7 +74,7 @@ void setup() {
   delay(100);
   FastLED.clear(true);
 
-  if (udp.listen(9090)) {
+  if (udp.listenMulticast(IPAddress(224, 1, 1, 1), 7780)) {
     udp.onPacket(onPacket);
   }
 }
