@@ -1,0 +1,11 @@
+[Unit]
+After=suspend.target
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/bin/systemctl restart ledstrip
+TimeoutSec=0
+
+[Install]
+WantedBy=suspend.target

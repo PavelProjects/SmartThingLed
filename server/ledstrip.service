@@ -1,0 +1,11 @@
+[Unit]
+Description=Led strip server
+Conflicts=sleep.target shutdown.target
+
+[Service]
+User=pobopo
+Type=simple
+ExecStart=/home/pobopo/projects/smart_thing/smart_thing_led/server/strip_server.out /home/pobopo/projects/smart_thing/smart_thing_led/server/cava_config
+
+[Install]
+WantedBy=multi-user.target

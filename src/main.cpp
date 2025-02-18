@@ -137,6 +137,7 @@ void onPacket(AsyncUDPPacket &packet) {
     }
     music(channels);
   }
+  udp.flush();
 }
 
 void addActions() {
@@ -187,9 +188,9 @@ void music(int8_t *channels) {
     if (channelsCurrent[ch] == channels[ch]) {
       continue;
     }
-
+    
+    int index = 0;
     if (channels[ch] > channelsCurrent[ch]) {
-      int index = 0;
       for (int i = channelsCurrent[ch]; i < channels[ch]; i++) {
         if (ch == 0) {
           index = 1 - i;
@@ -199,7 +200,6 @@ void music(int8_t *channels) {
         leds[HALF_LEDS_INDEX + index] = CHSV(musicBase + i, 255, 255);
       }
     } else {
-      int index = 0;
       for (int i = channelsCurrent[ch]; i >= channels[ch]; i--) {
         if (ch == 0) {
           index = 1 - i;

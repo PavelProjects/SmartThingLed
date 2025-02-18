@@ -1,17 +1,18 @@
 # https://github.com/karlstav/cava/blob/master/example_files/config
 
 [general]
-bars = 1
-sensitivity = 60
+bars = 2
+sensitivity = 70
 lower_cutoff_freq = 50
-higher_cutoff_freq = 2000
+higher_cutoff_freq = 1500
 
 [output]
 method = raw
 bit_format = 8bit
 
 data_format = ascii
-ascii_max_range = 58
+;ascii_max_range = 58
+ascii_max_range = 72
 
 bar_delimiter = 59
 frame_delimiter = 10
